@@ -181,8 +181,7 @@ local SaveManager = {} do
         return out
     end
 
-    -- Функция для создания UI с настройками конфигурации
-        assert(self.Library, 'Must set SaveManager.Library')
+    -- Функция для создания UI с настройками конфигураци
 
         -- Добавляем кнопки и элементы в UI
         ConfigsSec:Button({
