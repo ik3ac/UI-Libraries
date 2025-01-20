@@ -40,7 +40,6 @@ local SaveManager = {} do
     -- ... (оставшаяся часть вашего кода)
 
     -- Функция для создания UI с настройками конфигурации
-    function SaveManager:BuildConfigSection(tab)
         -- Убедитесь, что self.Library инициализировано
         assert(self.Library, 'Must set SaveManager.Library')
 
@@ -89,9 +88,7 @@ local SaveManager = {} do
                 Colorpickers[1] = HSV
             end
         })
-    end
 
-    SaveManager:BuildFolderTree()
 end
 
 return SaveManager
