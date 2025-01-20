@@ -264,7 +264,6 @@ local SaveManager = {} do
 
         -- Прочие элементы можно добавить аналогично
 
-    SaveManager:BuildFolderTree()
 end
 
 return SaveManager
