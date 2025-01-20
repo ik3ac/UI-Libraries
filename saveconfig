@@ -186,7 +186,7 @@ local SaveManager = {} do
         assert(self.Library, 'Must set SaveManager.Library')
 
         -- Добавляем кнопки и элементы в UI
-        Section:Button({
+        ConfigsSec:Button({
             text = "Create Config",
             callback = function()
                 local name = SaveManager_ConfigName.Value
@@ -205,7 +205,7 @@ local SaveManager = {} do
             end
         })
 
-        Section:Button({
+        ConfigsSec:Button({
             text = "Load Config",
             callback = function()
                 local name = SaveManager_ConfigList.Value
@@ -219,7 +219,7 @@ local SaveManager = {} do
             end
         })
 
-        Section:Dropdown({
+        ConfigsSec:Dropdown({
             text = "Config List",
             list = self:RefreshConfigList(),
             default = nil,
@@ -238,7 +238,7 @@ local SaveManager = {} do
         })
 
         -- Добавление других элементов (Toggle, Slider, ColorPicker и т.д.)
-        Section:Toggle({
+        ConfigsSec:Toggle({
             text = "Toggle",
             state = false, 
             callback = function(boolean)
@@ -246,7 +246,7 @@ local SaveManager = {} do
             end
         })
 
-        Section:Slider({
+        ConfigsSec:Slider({
             text = "Slider",
             min = 10,
             max = 100,
@@ -255,7 +255,7 @@ local SaveManager = {} do
             end
         })
 
-        Section:Colorpicker({
+        ConfigsSec:Colorpicker({
             text = "Colorpicker",
             color = Color3.new(1, 1, 1),
             callback = function(HSV)
