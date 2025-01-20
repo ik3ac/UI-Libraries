@@ -6,69 +6,62 @@ local SaveManager = {} do
     SaveManager.Parser = {
         Toggle = {
             Save = function(idx, object) 
-                return { type = 'Toggle', idx = idx, value = object.Value } 
+                return { type = 'Toggle', idx = idx, value = object.state } 
             end,
             Load = function(idx, data)
                 if Toggles[idx] then 
-                    Toggles[idx]:SetValue(data.value)
+                    Toggles[idx]:SetState(data.value)
                 end
             end,
         },
         Slider = {
             Save = function(idx, object)
-                return { type = 'Slider', idx = idx, value = tostring(object.Value) }
+                return { type = 'Slider', idx = idx, value = tostring(object.value) }
             end,
             Load = function(idx, data)
-                if Options[idx] then 
-                    Options[idx]:SetValue(data.value)
+                if Sliders[idx] then 
+                    Sliders[idx]:SetValue(tonumber(data.value))
                 end
             end,
         },
         Dropdown = {
             Save = function(idx, object)
-                return { type = 'Dropdown', idx = idx, value = object.Value, mutli = object.Multi }
+                return { type = 'Dropdown', idx = idx, value = object.selected }
             end,
             Load = function(idx, data)
-                if Options[idx] then 
-                    Options[idx]:SetValue(data.value)
+                if Dropdowns[idx] then 
+                    Dropdowns[idx]:SetSelected(data.value)
                 end
             end,
         },
-        ColorPicker = {
+        Textbox = {
             Save = function(idx, object)
-                return { type = 'ColorPicker', idx = idx, value = object.Value:ToHex(), transparency = object.Transparency }
+                return { type = 'Textbox', idx = idx, text = object.value }
             end,
             Load = function(idx, data)
-                if Options[idx] then 
-                    Options[idx]:SetValueRGB(Color3.fromHex(data.value), data.transparency)
+                if Textboxes[idx] then 
+                    Textboxes[idx]:SetValue(data.text)
                 end
             end,
         },
-        KeyPicker = {
+        Colorpicker = {
             Save = function(idx, object)
-                return { type = 'KeyPicker', idx = idx, mode = object.Mode, key = object.Value }
+                return { type = 'Colorpicker', idx = idx, color = object.color, transparency = object.transparency }
             end,
             Load = function(idx, data)
-                if Options[idx] then 
-                    Options[idx]:SetValue({ data.key, data.mode })
-                end
-            end,
-        },
-        Input = {
-            Save = function(idx, object)
-                return { type = 'Input', idx = idx, text = object.Value }
-            end,
-            Load = function(idx, data)
-                if Options[idx] and type(data.text) == 'string' then
-                    Options[idx]:SetValue(data.text)
+                if Colorpickers[idx] then 
+                    Colorpickers[idx]:SetColor(data.color, data.transparency)
                 end
             end,
         },
     }
 
-    -- Инициализация глобальных объектов Toggles и Options
+    -- Инициализация глобальных объектов для UI элементов
     local Toggles = {}
-    local Options = {}
+    local Sliders = {}
+    local Dropdowns = {}
+    local Textboxes = {}
+    local Colorpickers = {}
 
     function SaveManager:SetIgnoreIndexes(list)
         for _, key in next, list do
@@ -88,21 +81,38 @@ local SaveManager = {} do
 
         local data = { objects = {} }
 
-        -- Сохраняем Toggles
+        -- Сохраняем все элементы UI
         for idx, toggle in next, Toggles do
             if not self.Ignore[idx] then
                 table.insert(data.objects, self.Parser.Toggle.Save(idx, toggle))
             end
         end
 
-        -- Сохраняем Options
-        for idx, option in next, Options do
-            if self.Parser[option.Type] and not self.Ignore[idx] then
-                table.insert(data.objects, self.Parser[option.Type].Save(idx, option))
+        for idx, slider in next, Sliders do
+            if not self.Ignore[idx] then
+                table.insert(data.objects, self.Parser.Slider.Save(idx, slider))
             end
         end
 
-        -- Кодирование данных в JSON
+        for idx, dropdown in next, Dropdowns do
+            if not self.Ignore[idx] then
+                table.insert(data.objects, self.Parser.Dropdown.Save(idx, dropdown))
+            end
+        end
+
+        for idx, textbox in next, Textboxes do
+            if not self.Ignore[idx] then
+                table.insert(data.objects, self.Parser.Textbox.Save(idx, textbox))
+            end
+        end
+
+        for idx, colorpicker in next, Colorpickers do
+            if not self.Ignore[idx] then
+                table.insert(data.objects, self.Parser.Colorpicker.Save(idx, colorpicker))
+            end
+        end
+
+        -- Кодируем данные в JSON
         local success, encoded = pcall(httpService.JSONEncode, httpService, data)
         if not success then return false, 'Failed to encode data' end
 
@@ -116,7 +126,7 @@ local SaveManager = {} do
         local file = self.Folder .. '/settings/' .. name .. '.json'
         if not isfile(file) then return false, 'Invalid file' end
 
-        -- Декодирование JSON файла
+        -- Декодируем JSON файл
         local success, decoded = pcall(httpService.JSONDecode, httpService, readfile(file))
         if not success then return false, 'Decode error' end
 
@@ -175,119 +185,85 @@ local SaveManager = {} do
     function SaveManager:BuildConfigSection(tab)
         assert(self.Library, 'Must set SaveManager.Library')
 
-       -- local section = tab:AddRightGroupbox('Configuration')
+        -- Добавляем кнопки и элементы в UI
+        Section:Button({
+            text = "Create Config",
+            callback = function()
+                local name = SaveManager_ConfigName.Value
 
-    --    ConfigsSec:AddInput('SaveManager_ConfigName', { Text = 'Config name' })
-ConfigsSec:Textbox({
-    text = "Config Name",
-    value = "Config Name",
-    callback = function(String)
-        print(String)
-        SaveManager_ConfigName = String
-    end
-})
+                if name:gsub(' ', '') == '' then 
+                    return print('Invalid config name (empty)', 2)
+                end
 
-     --   ConfigsSec:AddDropdown('SaveManager_ConfigList', { Text = 'Config list', Values = self:RefreshConfigList(), AllowNull = true })
-ConfigsSec:Dropdown({
-    text = "Config list",
-    list = {"First"},
-    default = "First",
-    callback = function(DropdownString)
-        SaveManager_ConfigList = DropdownString
-    end
-})
+                local success, err = self:Save(name)
+                if not success then
+                    return print('Failed to save config: ' .. err)
+                end
 
-      --  section:AddDivider()
-
-    --[[    section:AddButton('Create config', function()
-            local name = Options.SaveManager_ConfigName.Value
-
-            if name:gsub(' ', '') == '' then 
-                return self.Library:Notify('Invalid config name (empty)', 2)
+                SaveManager_ConfigList:SetValues(self:RefreshConfigList())
+                SaveManager_ConfigList:SetValue(nil)
             end
+        })
 
-            local success, err = self:Save(name)
-            if not success then
-                return self.Library:Notify('Failed to save config: ' .. err)
+        Section:Button({
+            text = "Load Config",
+            callback = function()
+                local name = SaveManager_ConfigList.Value
+
+                local success, err = self:Load(name)
+                if not success then
+                    return print('Failed to load config: ' .. err)
+                end
+
+                print(string.format('Loaded config %q', name))
             end
+        })
 
-            self.Library:Notify(string.format('Created config %q', name))
-
-            Options.SaveManager_ConfigList:SetValues(self:RefreshConfigList())
-            Options.SaveManager_ConfigList:SetValue(nil)
-        end):AddButton('Load config', function()
-            local name = Options.SaveManager_ConfigList.Value
-
-            local success, err = self:Load(name)
-            if not success then
-                return self.Library:Notify('Failed to load config: ' .. err)
+        Section:Dropdown({
+            text = "Config List",
+            list = self:RefreshConfigList(),
+            default = nil,
+            callback = function(dropdownValue)
+                SaveManager_ConfigList = dropdownValue
             end
+        })
 
-            self.Library:Notify(string.format('Loaded config %q', name))
-        end)]]
-
-ConfigsSec:Button({
-    text = "Create Config",
-    callback = function(value)
-        local name = SaveManager_ConfigName
-
-     if name:gsub(' ', '') == '' then 
-             return print('Invalid config name (empty)', 2)
-        end
-
- local success, err = self:Save(name)
-            if not success then
-                return print('Failed to save config: ' .. err)
+        -- Настройки остальных элементов UI
+        Section:Textbox({
+            text = "Config Name",
+            value = "Config Name",
+            callback = function(String)
+                SaveManager_ConfigName = String
             end
+        })
 
-            SaveManager_ConfigList:SetValues(self:RefreshConfigList())
-            SaveManager_ConfigList:SetValue(nil)
-        end
-
-})
-
-ConfigsSec:Button({
-    text = "Load Config",
-    callback = function(loadconfig)
-     local name = SaveManager_ConfigList
-
-            local success, err = self:Load(name)
-            if not success then
-                return print('Failed to load config: ' .. err)
+        -- Добавление других элементов (Toggle, Slider, ColorPicker и т.д.)
+        Section:Toggle({
+            text = "Toggle",
+            state = false, 
+            callback = function(boolean)
+                Toggles[1] = boolean
             end
+        })
 
-           print(string.format('Loaded config %q', name))
-end
-})
-        section:AddButton('Overwrite config', function()
-            local name = Options.SaveManager_ConfigList.Value
-
-            local success, err = self:Save(name)
-            if not success then
-                return self.Library:Notify('Failed to overwrite config: ' .. err)
+        Section:Slider({
+            text = "Slider",
+            min = 10,
+            max = 100,
+            callback = function(number)
+                Sliders[1] = number
             end
+        })
 
-            self.Library:Notify(string.format('Overwrote config %q', name))
-        end)
+        Section:Colorpicker({
+            text = "Colorpicker",
+            color = Color3.new(1, 1, 1),
+            callback = function(HSV)
+                Colorpickers[1] = HSV
+            end
+        })
 
-        --[[section:AddButton('Refresh list', function()
-            Options.SaveManager_ConfigList:SetValues(self:RefreshConfigList())
-            Options.SaveManager_ConfigList:SetValue(nil)
-        end)]]
-ConfigsSec:Button({
-    text = "Refresh list",
-    callback = function(test)
-            SaveManager_ConfigList:SetValues(self:RefreshConfigList())
-            SaveManager_ConfigList:SetValue(nil)
-end
-})
-     --[[   section:AddButton('Set as autoload', function()
-            local name = Options.SaveManager_ConfigList.Value
-            writefile(self.Folder .. '/settings/autoload.txt', name)
-            self.Library:Notify(string.format('Set %q to auto load', name))
-        end)]]
-
-        SaveManager:SetIgnoreIndexes({ 'SaveManager_ConfigList', 'SaveManager_ConfigName' })
+        -- Прочие элементы можно добавить аналогично
     end
 
     SaveManager:BuildFolderTree()
