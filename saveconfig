@@ -182,7 +182,7 @@ local SaveManager = {} do
     end
 
     -- Функция для создания UI с настройками конфигурации
-    function SaveManager:BuildConfigSection(tab)
+    function SaveManager:BuildConfigSection()
         assert(self.Library, 'Must set SaveManager.Library')
 
         -- Добавляем кнопки и элементы в UI
