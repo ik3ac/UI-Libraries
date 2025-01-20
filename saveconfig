@@ -4,56 +4,7 @@ local SaveManager = {} do
     SaveManager.Folder = 'CelestialCCSettings'
     SaveManager.Ignore = {}
     SaveManager.Parser = {
-        Toggle = {
-            Save = function(idx, object) 
-                return { type = 'Toggle', idx = idx, value = object.state } 
-            end,
-            Load = function(idx, data)
-                if Toggles[idx] then 
-                    Toggles[idx]:SetState(data.value)
-                end
-            end,
-        },
-        Slider = {
-            Save = function(idx, object)
-                return { type = 'Slider', idx = idx, value = tostring(object.value) }
-            end,
-            Load = function(idx, data)
-                if Sliders[idx] then 
-                    Sliders[idx]:SetValue(tonumber(data.value))
-                end
-            end,
-        },
-        Dropdown = {
-            Save = function(idx, object)
-                return { type = 'Dropdown', idx = idx, value = object.selected }
-            end,
-            Load = function(idx, data)
-                if Dropdowns[idx] then 
-                    Dropdowns[idx]:SetSelected(data.value)
-                end
-            end,
-        },
-        Textbox = {
-            Save = function(idx, object)
-                return { type = 'Textbox', idx = idx, text = object.value }
-            end,
-            Load = function(idx, data)
-                if Textboxes[idx] then 
-                    Textboxes[idx]:SetValue(data.text)
-                end
-            end,
-        },
-        Colorpicker = {
-            Save = function(idx, object)
-                return { type = 'Colorpicker', idx = idx, color = object.color, transparency = object.transparency }
-            end,
-            Load = function(idx, data)
-                if Colorpickers[idx] then 
-                    Colorpickers[idx]:SetColor(data.color, data.transparency)
-                end
-            end,
-        },
+        -- ... (ваши парсеры для Toggle, Slider и т. д.)
     }
 
     -- Инициализация глобальных объектов для UI элементов
@@ -62,6 +13,18 @@ local SaveManager = {} do
     local Dropdowns = {}
     local Textboxes = {}
     local Colorpickers = {}
+
+    -- Функция для установки библиотеки UI
+    function SaveManager:SetLibrary(Library)
+        assert(Library, 'Library must be provided!')
+        self.Library = Library
+    end
+
+    -- Загрузка библиотеки UI
+    local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/ik3ac/forcheat/refs/heads/main/uilibrary2"))()
+
+    -- Установим библиотеку в SaveManager
+    SaveManager:SetLibrary(Library)
 
     function SaveManager:SetIgnoreIndexes(list)
         for _, key in next, list do
@@ -74,117 +37,18 @@ local SaveManager = {} do
         self:BuildFolderTree()
     end
 
-    function SaveManager:Save(name)
-        if not name then return false, 'No config file is selected' end
+    -- ... (оставшаяся часть вашего кода)
 
-        local fullPath = self.Folder .. '/settings/' .. name .. '.json'
+    -- Функция для создания UI с настройками конфигурации
+    function SaveManager:BuildConfigSection(tab)
+        -- Убедитесь, что self.Library инициализировано
+        assert(self.Library, 'Must set SaveManager.Library')
 
-        local data = { objects = {} }
-
-        -- Сохраняем все элементы UI
-        for idx, toggle in next, Toggles do
-            if not self.Ignore[idx] then
-                table.insert(data.objects, self.Parser.Toggle.Save(idx, toggle))
-            end
-        end
-
-        for idx, slider in next, Sliders do
-            if not self.Ignore[idx] then
-                table.insert(data.objects, self.Parser.Slider.Save(idx, slider))
-            end
-        end
-
-        for idx, dropdown in next, Dropdowns do
-            if not self.Ignore[idx] then
-                table.insert(data.objects, self.Parser.Dropdown.Save(idx, dropdown))
-            end
-        end
-
-        for idx, textbox in next, Textboxes do
-            if not self.Ignore[idx] then
-                table.insert(data.objects, self.Parser.Textbox.Save(idx, textbox))
-            end
-        end
-
-        for idx, colorpicker in next, Colorpickers do
-            if not self.Ignore[idx] then
-                table.insert(data.objects, self.Parser.Colorpicker.Save(idx, colorpicker))
-            end
-        end
-
-        -- Кодируем данные в JSON
-        local success, encoded = pcall(httpService.JSONEncode, httpService, data)
-        if not success then return false, 'Failed to encode data' end
-
-        writefile(fullPath, encoded)
-        return true
-    end
-
-    function SaveManager:Load(name)
-        if not name then return false, 'No config file is selected' end
-
-        local file = self.Folder .. '/settings/' .. name .. '.json'
-        if not isfile(file) then return false, 'Invalid file' end
-
-        -- Декодируем JSON файл
-        local success, decoded = pcall(httpService.JSONDecode, httpService, readfile(file))
-        if not success then return false, 'Decode error' end
-
-        -- Загружаем объекты
-        for _, option in next, decoded.objects do
-            if self.Parser[option.type] then
-                task.spawn(function()
-                    self.Parser[option.type].Load(option.idx, option)
-                end)
-            end
-        end
-
-        return true
-    end
-
-    -- Создание необходимых директорий
-    function SaveManager:BuildFolderTree()
-        local paths = {
-            self.Folder,
-            self.Folder .. '/themes',
-            self.Folder .. '/settings'
-        }
-
-        for _, str in next, paths do
-            if not isfolder(str) then
-                makefolder(str)
-            end
-        end
-    end
-
-    -- Функция для обновления списка конфигураций
-    function SaveManager:RefreshConfigList()
-        local list = listfiles(self.Folder .. '/settings')
-        local out = {}
-
-        for _, file in next, list do
-            if file:sub(-5) == '.json' then
-                local pos = file:find('.json', 1, true)
-                local start = pos
-
-                local char = file:sub(pos, pos)
-                while char ~= '/' and char ~= '\\' and char ~= '' do
-                    pos = pos - 1
-                    char = file:sub(pos, pos)
-                end
-
-                if char == '/' or char == '\\' then
-                    table.insert(out, file:sub(pos + 1, start - 1))
-                end
-            end
-        end
-        return out
-    end
-        -- Добавляем кнопки и элементы в UI
-        ConfigsSec:Button({
+        -- Теперь вы можете безопасно использовать Library
+        Section:Button({
             text = "Create Config",
             callback = function()
-                local name = SaveManager_ConfigName
+                local name = SaveManager_ConfigName.Value
 
                 if name:gsub(' ', '') == '' then 
                     return print('Invalid config name (empty)', 2)
@@ -200,40 +64,8 @@ local SaveManager = {} do
             end
         })
 
-        ConfigsSec:Button({
-            text = "Load Config",
-            callback = function()
-                local name = SaveManager_ConfigList
-
-                local success, err = self:Load(name)
-                if not success then
-                    return print('Failed to load config: ' .. err)
-                end
-
-                print(string.format('Loaded config %q', name))
-            end
-        })
-
-        ConfigsSec:Dropdown({
-            text = "Config List",
-            list = self:RefreshConfigList(),
-            default = nil,
-            callback = function(dropdownValue)
-                SaveManager_ConfigList = dropdownValue
-            end
-        })
-
-        -- Настройки остальных элементов UI
-        Section:Textbox({
-            text = "Config Name",
-            value = "Config Name",
-            callback = function(String)
-                SaveManager_ConfigName = String
-            end
-        })
-
-        -- Добавление других элементов (Toggle, Slider, ColorPicker и т.д.)
-        ConfigsSec:Toggle({
+        -- Добавляем другие элементы в секцию
+        Section:Toggle({
             text = "Toggle",
             state = false, 
             callback = function(boolean)
@@ -241,7 +73,7 @@ local SaveManager = {} do
             end
         })
 
-        ConfigsSec:Slider({
+        Section:Slider({
             text = "Slider",
             min = 10,
             max = 100,
@@ -250,16 +82,16 @@ local SaveManager = {} do
             end
         })
 
-        ConfigsSec:Colorpicker({
+        Section:Colorpicker({
             text = "Colorpicker",
             color = Color3.new(1, 1, 1),
             callback = function(HSV)
                 Colorpickers[1] = HSV
             end
         })
+    end
 
-        -- Прочие элементы можно добавить аналогично
-
+    SaveManager:BuildFolderTree()
 end
 
 return SaveManager
