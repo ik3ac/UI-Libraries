@@ -175,14 +175,31 @@ local SaveManager = {} do
     function SaveManager:BuildConfigSection(tab)
         assert(self.Library, 'Must set SaveManager.Library')
 
-        local section = tab:AddRightGroupbox('Configuration')
+       -- local section = tab:AddRightGroupbox('Configuration')
 
-        section:AddInput('SaveManager_ConfigName', { Text = 'Config name' })
-        section:AddDropdown('SaveManager_ConfigList', { Text = 'Config list', Values = self:RefreshConfigList(), AllowNull = true })
+    --    ConfigsSec:AddInput('SaveManager_ConfigName', { Text = 'Config name' })
+ConfigsSec:Textbox({
+    text = "Config Name",
+    value = "Config Name",
+    callback = function(String)
+        print(String)
+        SaveManager_ConfigName = String
+    end
+})
 
-        section:AddDivider()
+     --   ConfigsSec:AddDropdown('SaveManager_ConfigList', { Text = 'Config list', Values = self:RefreshConfigList(), AllowNull = true })
+ConfigsSec:Dropdown({
+    text = "Config list",
+    list = {"First"},
+    default = "First",
+    callback = function(DropdownString)
+        SaveManager_ConfigList = DropdownString
+    end
+})
 
-        section:AddButton('Create config', function()
+      --  section:AddDivider()
+
+    --[[    section:AddButton('Create config', function()
             local name = Options.SaveManager_ConfigName.Value
 
             if name:gsub(' ', '') == '' then 
@@ -207,8 +224,41 @@ local SaveManager = {} do
             end
 
             self.Library:Notify(string.format('Loaded config %q', name))
-        end)
+        end)]]
 
+ConfigsSec:Button({
+    text = "Create Config",
+    callback = function(value)
+        local name = SaveManager_ConfigName
+
+     if name:gsub(' ', '') == '' then 
+             return print('Invalid config name (empty)', 2)
+        end
+
+ local success, err = self:Save(name)
+            if not success then
+                return print('Failed to save config: ' .. err)
+            end
+
+            SaveManager_ConfigList:SetValues(self:RefreshConfigList())
+            SaveManager_ConfigList:SetValue(nil)
+        end
+
+})
+
+ConfigsSec:Button({
+    text = "Load Config",
+    callback = function(loadconfig)
+     local name = SaveManager_ConfigList
+
+            local success, err = self:Load(name)
+            if not success then
+                return print('Failed to load config: ' .. err)
+            end
+
+           print(string.format('Loaded config %q', name))
+end
+})
         section:AddButton('Overwrite config', function()
             local name = Options.SaveManager_ConfigList.Value
 
@@ -220,16 +270,22 @@ local SaveManager = {} do
             self.Library:Notify(string.format('Overwrote config %q', name))
         end)
 
-        section:AddButton('Refresh list', function()
+        --[[section:AddButton('Refresh list', function()
             Options.SaveManager_ConfigList:SetValues(self:RefreshConfigList())
             Options.SaveManager_ConfigList:SetValue(nil)
-        end)
-
-        section:AddButton('Set as autoload', function()
+        end)]]
+ConfigsSec:Button({
+    text = "Refresh list",
+    callback = function(test)
+            SaveManager_ConfigList:SetValues(self:RefreshConfigList())
+            SaveManager_ConfigList:SetValue(nil)
+end
+})
+     --[[   section:AddButton('Set as autoload', function()
             local name = Options.SaveManager_ConfigList.Value
             writefile(self.Folder .. '/settings/autoload.txt', name)
             self.Library:Notify(string.format('Set %q to auto load', name))
-        end)
+        end)]]
 
         SaveManager:SetIgnoreIndexes({ 'SaveManager_ConfigList', 'SaveManager_ConfigName' })
     end
